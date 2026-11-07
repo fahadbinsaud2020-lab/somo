@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>برج السمو للنقليات</title>
+<style>
+:root{--bg:#f4f1ea;--card:#fff;--ink:#1d2a2a;--mute:#6b7573;--pri:#0f5c4d;--pri2:#0b4338;--line:#ded9cc;--warn:#b45309;--bad:#b91c1c;--ok:#15803d}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#12181a;--card:#1b2427;--ink:#e8eeec;--mute:#9aa8a5;--pri:#34a58f;--pri2:#2a8774;--line:#2c3a3d;--warn:#f59e0b;--bad:#f87171;--ok:#4ade80}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic",Arial,sans-serif;line-height:1.6;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+header{background:var(--pri2);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:12px}header h1{margin:0;font-size:1.2rem;flex:1}header small{display:block;font-weight:400;opacity:.85;font-size:.8rem}
+nav{display:flex;gap:6px;overflow-x:auto;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line)}
+nav button{white-space:nowrap;border:1px solid var(--line);background:transparent;color:var(--ink);padding:8px 14px;border-radius:999px;cursor:pointer;font:inherit}nav button.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+main{max-width:1100px;margin:0 auto;padding:16px}.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.bar input{flex:1;min-width:160px;width:auto}
+input,select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:100%}
+.btn{border:0;background:var(--pri);color:#fff;padding:8px 16px;border-radius:8px;cursor:pointer;font:inherit}.btn.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}.btn.w{color:#fff;border-color:#fff8}.btn.del{background:var(--bad)}
+.card,.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}.box{max-width:380px;margin:12vh auto 0}.box label{display:block;margin:10px 0 3px;font-size:.85rem;color:var(--mute)}
+.wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden}th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}th{background:var(--pri);color:#fff}
+.tag{padding:2px 9px;border-radius:999px;font-size:.78rem;color:#fff}.t-bad{background:var(--bad)}.t-warn{background:var(--warn)}.t-ok{background:var(--ok)}
+dialog{border:0;border-radius:14px;padding:0;width:min(640px,94vw);background:var(--card);color:var(--ink)}dialog::backdrop{background:#0008}.dh{padding:14px 18px;background:var(--pri2);color:#fff;font-weight:700}
+.df{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;padding:16px;max-height:65vh;overflow:auto}.df label{font-size:.85rem;color:var(--mute);display:block;margin-bottom:3px}.da{padding:12px 16px;display:flex;gap:8px;border-top:1px solid var(--line)}
+.empty{text-align:center;padding:26px;color:var(--mute)}.mute{color:var(--mute)}.er{color:var(--bad);min-height:1.4em;margin:8px 0}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import{getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,sendPasswordResetEmail}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import{initializeFirestore,persistentLocalCache,persistentMultipleTabManager,doc,getDoc,setDoc,updateDoc,deleteDoc,collection,onSnapshot,addDoc,serverTimestamp,runTransaction,query,orderBy,limit}from"https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+/* ===== الصق هنا إعدادات Firebase (Project settings > Your apps) ===== */
+const CFG={apiKey:"PASTE_API_KEY",authDomain:"PASTE_PROJECT_ID.firebaseapp.com",projectId:"PASTE_PROJECT_ID",storageBucket:"",messagingSenderId:"",appId:""};
+/* =================================================================== */
+
+const $=id=>document.getElementById(id),A=$("app");
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+if(CFG.apiKey.startsWith("PASTE")){A.innerHTML='<div class="box"><h2>الإعداد ناقص</h2><p>افتح الملف وألصق إعدادات Firebase في أعلى السكربت (CFG).</p></div>';throw new Error("no config")}
+const fa=initializeApp(CFG),auth=getAuth(fa),db=initializeFirestore(fa,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
+let a2=null;const auth2=()=>a2||(a2=getAuth(initializeApp(CFG,"secondary")));
+const ROLES={admin:"أدمن",accountant:"محاسب",entry:"مدخل بيانات",viewer:"عرض فقط"};
+const LK={"carType": ["رأس ترلة", "شاحنة", "نقل", "دينا", "وانيت", "قلاب", "تانكر", "سطحة", "ثلاجة", "حافلة"], "carAc": ["ال جي", "ترين", "ثرموكنج", "كارير"], "color": ["أبيض", "أخضر", "رمادي", "أسود", "أحمر", "أزرق", "أصفر", "فضي", "برتقالي"], "insuComp": ["التعاونية", "مد جولف"], "insuType": ["شامل", "عادي"], "nat": ["باكستاني", "بنجلاديشي", "سعودي", "سوداني", "صومالي", "مصري", "هندي", "يمني"], "religion": ["مسلم", "مسيحي"]};
+const ERR={"auth/invalid-credential":"البريد أو كلمة السر غير صحيحة","auth/invalid-email":"بريد غير صالح","auth/too-many-requests":"محاولات كثيرة، حاول لاحقاً","auth/network-request-failed":"لا يوجد اتصال بالإنترنت","auth/email-already-in-use":"هذا البريد مسجل مسبقاً","auth/weak-password":"كلمة السر ضعيفة (6 أحرف على الأقل)","permission-denied":"لا تملك صلاحية لهذه العملية"};
+const err=e=>ERR[e.code]||e.message||String(e);
+const W=["admin","accountant"],EXP=["CarLicenXdate","CarInsuXDate","DrivIqXdate","DrivLicenXDate"];
+const E={
+cars:{n:"السيارات",key:"CarNo",w:W,cols:["CarNo","CarEno","CarType","CarModel","CarLicenXdate","CarInsuXDate"],f:[["CarNo","رقم اللوحة"],["CarEno","اللوحة بالإنجليزي"],["CarType","النوع","s:carType"],["CarModel","الموديل"],["CarColor","اللون","s:color"],["CarWhit","الحمولة","n"],["CarAc","المكيّف / وحدة التبريد","s:carAc"],["CarLicen","رقم الاستمارة"],["CarLicenXdate","انتهاء الاستمارة","d"],["CarInsu","رقم البوليصة"],["CarInsuType","نوع التأمين","s:insuType"],["CarInsuComp","شركة التأمين","s:insuComp"],["CarInsuXDate","انتهاء التأمين","d"],["CarRem","ملاحظات"]]},
+drivers:{n:"السائقون",key:"DrivNo",w:W,cols:["DrivNo","DrivName","DrivNach","DrivMob","DrivIqXdate","DrivLicenXDate"],f:[["DrivNo","الرقم"],["DrivName","الاسم"],["DrivNach","الجنسية","s:nat"],["DrivDen","الديانة","s:religion"],["DrivIqamNo","رقم الإقامة"],["DrivIqXdate","انتهاء الإقامة","d"],["DrivLicenNo","رقم الرخصة"],["DrivLicenXDate","انتهاء الرخصة","d"],["DrivMob","الجوال"],["DrivResp","الكفيل"],["DrivRem","ملاحظات"]]}};
+let ME=null,S={},tab="cars",q="",unsubs=[],cur={},curId="";
+const stop=()=>{unsubs.forEach(f=>f());unsubs=[];S={}};
+const days=v=>Math.round((new Date(v+"T00:00:00")-new Date(new Date().toDateString()))/864e5);
+const log=(a,c,k)=>addDoc(collection(db,"audit"),{uid:ME.uid,name:ME.name||ME.email,action:a,coll:c,key:String(k),ts:serverTimestamp()}).catch(()=>{});
+const canW=c=>ME&&E[c]&&E[c].w.includes(ME.role);
+
+onAuthStateChanged(auth,async u=>{stop();ME=null;if(!u)return loginView();
+ try{const s=await getDoc(doc(db,"users",u.uid));if(!s.exists()||s.data().active!==true)return blocked("حسابك غير مفعّل أو غير مسجّل في النظام. تواصل مع الأدمن.");
+  ME={uid:u.uid,email:u.email,...s.data()};start()}catch(e){blocked("تعذر التحقق من الحساب: "+err(e))}});
+
+function loginView(m){A.innerHTML=`<div class="box"><h2 style="margin:0">برج السمو للنقليات</h2><p class="mute">تسجيل الدخول</p><form id="lf"><label>البريد الإلكتروني</label><input type="email" id="em" autocomplete="username" required><label>كلمة السر</label><input type="password" id="pw" autocomplete="current-password" required><div class="er" id="er">${esc(m||"")}</div><button class="btn" style="width:100%">دخول</button></form></div>`;
+ $("lf").onsubmit=async ev=>{ev.preventDefault();$("er").textContent="";try{await signInWithEmailAndPassword(auth,$("em").value.trim(),$("pw").value)}catch(e){$("er").textContent=err(e)}}}
+function blocked(m){A.innerHTML=`<div class="box"><h2 style="margin:0">تعذر الدخول</h2><p>${esc(m)}</p><button class="btn" onclick="logout()">خروج</button></div>`}
+
+function start(){
+ Object.keys(E).forEach(c=>unsubs.push(onSnapshot(collection(db,c),s=>{S[c]=s.docs.map(d=>({_id:d.id,...d.data()}));if(tab==c)view()},e=>alert(err(e)))));
+ if(ME.role=="admin"){
+  unsubs.push(onSnapshot(collection(db,"users"),s=>{S.users=s.docs.map(d=>({_id:d.id,...d.data()}));if(tab=="users")view()},e=>alert(err(e))));
+  unsubs.push(onSnapshot(query(collection(db,"audit"),orderBy("ts","desc"),limit(100)),s=>{S.audit=s.docs.map(d=>({_id:d.id,...d.data()}));if(tab=="audit")view()},()=>{}))}
+ shell()}
+function shell(){const tabs=[...Object.entries(E).map(([k,e])=>[k,e.n]),...(ME.role=="admin"?[["users","المستخدمون"],["audit","سجل العمليات"]]:[])];
+ A.innerHTML=`<header><h1>برج السمو للنقليات<small>${esc(ME.name||ME.email)} · ${ROLES[ME.role]||""}</small></h1><button class="btn sec w" onclick="logout()">خروج</button></header><nav>${tabs.map(([k,n])=>`<button class="${tab==k?"on":""}" onclick="go('${k}')">${n}</button>`).join("")}</nav><main id="main"></main><dialog id="dlg"><div class="dh" id="dt"></div><div class="df" id="df"></div><div class="da"><button class="btn" onclick="save()">حفظ</button><button class="btn sec" onclick="document.getElementById('dlg').close()">إلغاء</button></div></dialog>`;view()}
+function view(){if(!ME||!$("main"))return;document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.getAttribute("onclick")=="go('"+tab+"')"));
+ if(E[tab])return list();if(tab=="users")return users();if(tab=="audit")return audit()}
+
+function list(){const e=E[tab];$("main").innerHTML=`<div class="bar"><input id="q" placeholder="بحث في ${e.n}..." value="${esc(q)}" oninput="q=this.value;rows()">${canW(tab)?'<button class="btn" onclick="edit(\'\')">+ إضافة</button>':""}</div><div class="wrap" id="tb"></div>`;rows()}
+function rows(){const e=E[tab],d=(S[tab]||[]).filter(r=>!q||Object.values(r).some(v=>String(v).includes(q))).sort((a,b)=>String(a[e.key]).localeCompare(String(b[e.key]),"ar",{numeric:true}));
+ const cell=(c,v)=>{if(v==null||v==="")return"";if(EXP.includes(c)){const n=days(v),t=n<0?'<span class="tag t-bad">منتهي</span>':n<=60?`<span class="tag t-warn">${n} يوم</span>`:"";return esc(v)+" "+t}return esc(v)};
+ $("tb").innerHTML=d.length?`<table><tr>${e.cols.map(c=>`<th>${e.f.find(x=>x[0]==c)[1]}</th>`).join("")}<th></th></tr>${d.map(r=>`<tr>${e.cols.map(c=>`<td>${cell(c,r[c])}</td>`).join("")}<td>${canW(tab)?`<button class="btn sec" onclick="edit('${esc(r._id).replace(/'/g,"&#39;")}')">تعديل</button>`:""}</td></tr>`).join("")}</table>`:'<div class="empty">لا توجد بيانات</div>'}
+window.edit=id=>{const e=E[tab],r=(S[tab]||[]).find(x=>x._id===id)||{};const{_id,updatedAt,updatedBy,...rec}=r;cur=rec;curId=id;$("dt").textContent=(id?"تعديل - ":"إضافة - ")+e.n;
+ $("df").innerHTML=e.f.map(([k,l,t])=>{const v=cur[k]??"";let i;
+  if(t=="d")i=`<input type="date" data-k="${k}" value="${esc(v)}">`;else if(t=="n")i=`<input type="number" step="any" data-k="${k}" value="${esc(v)}">`;
+  else if(t&&t[0]=="s"){const o=LK[t.slice(2)]||[];i=`<select data-k="${k}"><option value=""></option>${[...new Set([...o,...(v?[v]:[])])].map(x=>`<option ${x==v?"selected":""}>${esc(x)}</option>`).join("")}</select>`}
+  else i=`<input data-k="${k}" value="${esc(v)}">`;return`<div><label>${l}</label>${i}</div>`}).join("")+(id?'<div><label>&nbsp;</label><button class="btn del" onclick="del()">حذف السجل</button></div>':"");$("dlg").showModal()};
+window.save=async()=>{const e=E[tab];document.querySelectorAll("#df [data-k]").forEach(el=>{el.value!==""?cur[el.dataset.k]=el.value:delete cur[el.dataset.k]});
+ const key=String(cur[e.key]||"").trim();if(!key){alert("الحقل الأساسي مطلوب");return}cur[e.key]=key;const id=key.replace(/\//g,"-"),ref=doc(db,tab,id);
+ try{await runTransaction(db,async tx=>{const ex=await tx.get(ref);if(curId!==id&&ex.exists())throw new Error("هذا الرقم مسجل مسبقاً");if(curId&&curId!==id)tx.delete(doc(db,tab,curId));tx.set(ref,{...cur,updatedAt:serverTimestamp(),updatedBy:ME.uid})});
+  log(curId?"تعديل":"إضافة",tab,id);$("dlg").close()}catch(x){alert("تعذر الحفظ: "+err(x))}};
+window.del=async()=>{if(!confirm("حذف هذا السجل نهائياً؟"))return;try{await deleteDoc(doc(db,tab,curId));log("حذف",tab,curId);$("dlg").close()}catch(x){alert("تعذر الحذف: "+err(x))}};
+
+function users(){const u=(S.users||[]).sort((a,b)=>String(a.name).localeCompare(String(b.name),"ar"));
+ $("main").innerHTML=`<div class="card"><h3 style="margin-top:0">إضافة مستخدم</h3><div class="g"><div><label>الاسم</label><input id="un"></div><div><label>البريد الإلكتروني</label><input id="ue" type="email"></div><div><label>الدور</label><select id="ur">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${k=="viewer"?"selected":""}>${v}</option>`).join("")}</select></div><div><label>كلمة سر مؤقتة</label><input id="up" value="${Math.random().toString(36).slice(2,10)}"></div><button class="btn" onclick="addUser()">إضافة</button></div><p class="mute" style="margin-bottom:0">أعطِ المستخدم البريد وكلمة السر المؤقتة، ويمكنه تغييرها عبر (إرسال رابط كلمة السر).</p></div>
+<div class="wrap" style="margin-top:14px"><table><tr><th>الاسم</th><th>البريد</th><th>الدور</th><th>مفعّل</th><th></th></tr>${u.map(x=>{const me=x._id==ME.uid;return`<tr><td>${esc(x.name)}</td><td dir="ltr">${esc(x.email)}</td><td><select ${me?"disabled":""} onchange="setRole('${x._id}',this.value)">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${k==x.role?"selected":""}>${v}</option>`).join("")}</select></td><td><input type="checkbox" style="width:auto" ${x.active?"checked":""} ${me?"disabled":""} onchange="setActive('${x._id}',this.checked)"></td><td><button class="btn sec" onclick="resetPw('${esc(x.email)}')">إرسال رابط كلمة السر</button></td></tr>`}).join("")}</table></div>`}
+window.addUser=async()=>{const name=$("un").value.trim(),email=$("ue").value.trim(),role=$("ur").value,pw=$("up").value;if(!name||!email||pw.length<6){alert("أكمل الاسم والبريد وكلمة سر من 6 أحرف على الأقل");return}
+ try{const a=auth2(),c=await createUserWithEmailAndPassword(a,email,pw);await signOut(a);await setDoc(doc(db,"users",c.user.uid),{name,email,role,active:true,createdAt:serverTimestamp(),createdBy:ME.uid});log("إضافة مستخدم","users",email);alert("تمت الإضافة.\nالبريد: "+email+"\nكلمة السر المؤقتة: "+pw)}catch(x){alert("تعذر الإضافة: "+err(x))}};
+window.setRole=async(id,role)=>{try{await updateDoc(doc(db,"users",id),{role});log("تغيير دور","users",id)}catch(x){alert(err(x))}};
+window.setActive=async(id,active)=>{try{await updateDoc(doc(db,"users",id),{active});log(active?"تفعيل":"تعطيل","users",id)}catch(x){alert(err(x));view()}};
+window.resetPw=async email=>{try{await sendPasswordResetEmail(auth,email);alert("أُرسل رابط تغيير كلمة السر إلى "+email)}catch(x){alert(err(x))}};
+function audit(){const a=S.audit||[];$("main").innerHTML=`<div class="wrap"><table><tr><th>الوقت</th><th>المستخدم</th><th>العملية</th><th>الجدول</th><th>المفتاح</th></tr>${a.map(x=>`<tr><td>${x.ts?esc(x.ts.toDate().toLocaleString("ar-SA-u-nu-latn")):""}</td><td>${esc(x.name)}</td><td>${esc(x.action)}</td><td>${esc(x.coll)}</td><td>${esc(x.key)}</td></tr>`).join("")||'<tr><td colspan="5" class="empty">لا توجد عمليات</td></tr>'}</table></div>`}
+window.go=t=>{tab=t;q="";view()};window.logout=()=>signOut(auth);window.q="";
+Object.defineProperty(window,"q",{get:()=>q,set:v=>{q=v}});
+</script>
+</body>
+</html>

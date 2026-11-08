@@ -53,12 +53,12 @@ const log=(a,c,k)=>addDoc(collection(db,"audit"),{uid:ME.uid,name:ME.name||ME.em
 const canW=c=>ME&&E[c]&&E[c].w.includes(ME.role);
 
 onAuthStateChanged(auth,async u=>{stop();ME=null;if(!u)return loginView();
- try{const s=await getDoc(doc(db,"users",u.uid));if(!s.exists()||s.data().active!==true)return blocked("حسابك غير مفعّل أو غير مسجّل في النظام. تواصل مع الأدمن.");
-  ME={uid:u.uid,email:u.email,...s.data()};start()}catch(e){blocked("تعذر التحقق من الحساب: "+err(e))}});
+ try{const s=await getDoc(doc(db,"users",u.uid));if(!s.exists()||s.data().active!==true)return blocked("حسابك غير مفعّل أو غير مسجّل في النظام. تواصل مع الأدمن.",u);
+  ME={uid:u.uid,email:u.email,...s.data()};start()}catch(e){blocked("تعذر التحقق من الحساب: "+err(e)+(e.code=="permission-denied"?" — غالباً لم تُنشر قواعد Firestore (تبويب Rules) بعد.":""),u)}});
 
 function loginView(m){A.innerHTML=`<div class="box"><h2 style="margin:0">برج السمو للنقليات</h2><p class="mute">تسجيل الدخول</p><form id="lf"><label>البريد الإلكتروني</label><input type="email" id="em" autocomplete="username" required><label>كلمة السر</label><input type="password" id="pw" autocomplete="current-password" required><div class="er" id="er">${esc(m||"")}</div><button class="btn" style="width:100%">دخول</button></form></div>`;
  $("lf").onsubmit=async ev=>{ev.preventDefault();$("er").textContent="";try{await signInWithEmailAndPassword(auth,$("em").value.trim(),$("pw").value)}catch(e){$("er").textContent=err(e)}}}
-function blocked(m){A.innerHTML=`<div class="box"><h2 style="margin:0">تعذر الدخول</h2><p>${esc(m)}</p><button class="btn" onclick="logout()">خروج</button></div>`}
+function blocked(m,u){A.innerHTML=`<div class="box"><h2 style="margin:0">تعذر الدخول</h2><p>${esc(m)}</p>${u?`<p class="mute" style="margin-bottom:4px">معرّف حسابك (UID) لإنشاء وثيقته في Firestore:</p><input dir="ltr" readonly value="${esc(u.uid)}" onclick="this.select()"><p class="mute" dir="ltr" style="margin:6px 0">${esc(u.email)}</p>`:""}<button class="btn" onclick="logout()">خروج</button></div>`}
 
 function start(){
  Object.keys(E).forEach(c=>unsubs.push(onSnapshot(collection(db,c),s=>{S[c]=s.docs.map(d=>({_id:d.id,...d.data()}));if(tab==c)view()},e=>alert(err(e)))));
